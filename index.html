@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.min.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-search.css">
+        <link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/nouislider.min.css">
+        <link rel="stylesheet" href="css/leaflet-control-geocoder.Geocoder.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/L.Control.Locate.min.js"></script>
+        <script src="js/leaflet-svg-shape-markers.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet-control-geocoder.Geocoder.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="js/leaflet-search.js"></script>
+        <script src="js/tailDT.js"></script>
+<script src="js/nouislider.min.js"></script>
+<script src="js/wNumb.js"></script>
+        <script src="data/Comunas_1.js"></script>
+        <script src="data/Barrios_2.js"></script>
+        <script src="data/AtractivosTursticos_3.js"></script>
+        <script src="data/AtractivosTursticos_4.js"></script>
+        <script src="data/AtractivosTursticos_5.js"></script>
+        <script>
+        var highlightLayer;
+        function highlightFeature(e) {
+            highlightLayer = e.target;
+
+            if (e.target.feature.geometry.type === 'LineString' || e.target.feature.geometry.type === 'MultiLineString') {
+              highlightLayer.setStyle({
+                color: '#ffff00',
+              });
+            } else {
+              highlightLayer.setStyle({
+                fillColor: '#ffff00',
+                fillOpacity: 1
+              });
+            }
+        }
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        })
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // add class to format popup if it contains media
+		function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					// Delay to force the redraw
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        L.control.locate({locateOptions: {maxZoom: 19}}).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+            if (bounds_group.getLayers().length) {
+                map.fitBounds(bounds_group.getBounds());
+            }
+        }
+        map.createPane('pane_OpenStreetMap_0');
+        map.getPane('pane_OpenStreetMap_0').style.zIndex = 400;
+        var layer_OpenStreetMap_0 = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            pane: 'pane_OpenStreetMap_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 19
+        });
+        layer_OpenStreetMap_0;
+        map.addLayer(layer_OpenStreetMap_0);
+        function pop_Comunas_1(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['REGION'] !== null ? autolinker.link(String(feature.properties['REGION']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['PROVINCIA'] !== null ? autolinker.link(String(feature.properties['PROVINCIA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['COMUNA'] !== null ? autolinker.link(String(feature.properties['COMUNA']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['SUPERFICIE'] !== null ? autolinker.link(String(feature.properties['SUPERFICIE']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Comunas_1_0() {
+            return {
+                pane: 'pane_Comunas_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(166,255,1,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Comunas_1');
+        map.getPane('pane_Comunas_1').style.zIndex = 401;
+        map.getPane('pane_Comunas_1').style['mix-blend-mode'] = 'normal';
+        var layer_Comunas_1 = new L.geoJson(json_Comunas_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Comunas_1',
+            layerName: 'layer_Comunas_1',
+            pane: 'pane_Comunas_1',
+            onEachFeature: pop_Comunas_1,
+            style: style_Comunas_1_0,
+        });
+        bounds_group.addLayer(layer_Comunas_1);
+        map.addLayer(layer_Comunas_1);
+        function pop_Barrios_2(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Nombre'] !== null ? autolinker.link(String(feature.properties['Nombre']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Barrios_2_0() {
+            return {
+                pane: 'pane_Barrios_2',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,255,255,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Barrios_2');
+        map.getPane('pane_Barrios_2').style.zIndex = 402;
+        map.getPane('pane_Barrios_2').style['mix-blend-mode'] = 'normal';
+        var layer_Barrios_2 = new L.geoJson(json_Barrios_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Barrios_2',
+            layerName: 'layer_Barrios_2',
+            pane: 'pane_Barrios_2',
+            onEachFeature: pop_Barrios_2,
+            style: style_Barrios_2_0,
+        });
+        bounds_group.addLayer(layer_Barrios_2);
+        map.addLayer(layer_Barrios_2);
+        function pop_AtractivosTursticos_3(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Lugar</th>\
+                        <td>' + (feature.properties['Lugar'] !== null ? autolinker.link(String(feature.properties['Lugar']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['Tipo'] !== null ? autolinker.link(String(feature.properties['Tipo']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Video</th>\
+                        <td>' + (feature.properties['Video'] !== null ? autolinker.link(String(feature.properties['Video']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Categoria</th>\
+                        <td>' + (feature.properties['Categoria'] !== null ? autolinker.link(String(feature.properties['Categoria']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_AtractivosTursticos_3_0(feature) {
+            switch(String(feature.properties['Tipo'])) {
+                case 'Gastronomía':
+                    return {
+                pane: 'pane_AtractivosTursticos_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,14,1,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Museo':
+                    return {
+                pane: 'pane_AtractivosTursticos_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(73,60,60,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Religioso':
+                    return {
+                pane: 'pane_AtractivosTursticos_3',
+                shape: 'diamond',
+                radius: 8.8,
+                opacity: 1,
+                color: 'rgba(50,87,128,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 2.0,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,234,1,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_AtractivosTursticos_3');
+        map.getPane('pane_AtractivosTursticos_3').style.zIndex = 403;
+        map.getPane('pane_AtractivosTursticos_3').style['mix-blend-mode'] = 'normal';
+        var layer_AtractivosTursticos_3 = new L.geoJson(json_AtractivosTursticos_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_AtractivosTursticos_3',
+            layerName: 'layer_AtractivosTursticos_3',
+            pane: 'pane_AtractivosTursticos_3',
+            onEachFeature: pop_AtractivosTursticos_3,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.shapeMarker(latlng, style_AtractivosTursticos_3_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_AtractivosTursticos_3);
+        map.addLayer(layer_AtractivosTursticos_3);
+        function pop_AtractivosTursticos_4(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Lugar</th>\
+                        <td>' + (feature.properties['Lugar'] !== null ? autolinker.link(String(feature.properties['Lugar']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['Tipo'] !== null ? autolinker.link(String(feature.properties['Tipo']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Video</th>\
+                        <td>' + (feature.properties['Video'] !== null ? autolinker.link(String(feature.properties['Video']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Categoria</th>\
+                        <td>' + (feature.properties['Categoria'] !== null ? autolinker.link(String(feature.properties['Categoria']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Area</th>\
+                        <td>' + (feature.properties['Area'] !== null ? autolinker.link(String(feature.properties['Area']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_AtractivosTursticos_4_0(feature) {
+            switch(String(feature.properties['Categoria'])) {
+                case 'Espacio Privado':
+                    return {
+                pane: 'pane_AtractivosTursticos_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(205,30,158,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Patrimonial':
+                    return {
+                pane: 'pane_AtractivosTursticos_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(255,187,1,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Sitio Natural':
+                    return {
+                pane: 'pane_AtractivosTursticos_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(115,255,1,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'Espacio Público':
+                    return {
+                pane: 'pane_AtractivosTursticos_4',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(127,255,251,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_AtractivosTursticos_4');
+        map.getPane('pane_AtractivosTursticos_4').style.zIndex = 404;
+        map.getPane('pane_AtractivosTursticos_4').style['mix-blend-mode'] = 'normal';
+        var layer_AtractivosTursticos_4 = new L.geoJson(json_AtractivosTursticos_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_AtractivosTursticos_4',
+            layerName: 'layer_AtractivosTursticos_4',
+            pane: 'pane_AtractivosTursticos_4',
+            onEachFeature: pop_AtractivosTursticos_4,
+            style: style_AtractivosTursticos_4_0,
+        });
+        bounds_group.addLayer(layer_AtractivosTursticos_4);
+        map.addLayer(layer_AtractivosTursticos_4);
+        function pop_AtractivosTursticos_5(feature, layer) {
+            layer.on({
+                mouseout: function(e) {
+                    for (var i in e.target._eventParents) {
+                        if (typeof e.target._eventParents[i].resetStyle === 'function') {
+                            e.target._eventParents[i].resetStyle(e.target);
+                        }
+                    }
+                },
+                mouseover: highlightFeature,
+            });
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">Lugar</th>\
+                        <td>' + (feature.properties['Lugar'] !== null ? autolinker.link(String(feature.properties['Lugar']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Tipo</th>\
+                        <td>' + (feature.properties['Tipo'] !== null ? autolinker.link(String(feature.properties['Tipo']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Video</th>\
+                        <td>' + (feature.properties['Video'] !== null ? autolinker.link(String(feature.properties['Video']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Categoria</th>\
+                        <td>' + (feature.properties['Categoria'] !== null ? autolinker.link(String(feature.properties['Categoria']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_AtractivosTursticos_5_0() {
+            return {
+                pane: 'pane_AtractivosTursticos_5',
+                opacity: 1,
+                color: 'rgba(255,170,1,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 4.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_AtractivosTursticos_5');
+        map.getPane('pane_AtractivosTursticos_5').style.zIndex = 405;
+        map.getPane('pane_AtractivosTursticos_5').style['mix-blend-mode'] = 'normal';
+        var layer_AtractivosTursticos_5 = new L.geoJson(json_AtractivosTursticos_5, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_AtractivosTursticos_5',
+            layerName: 'layer_AtractivosTursticos_5',
+            pane: 'pane_AtractivosTursticos_5',
+            onEachFeature: pop_AtractivosTursticos_5,
+            style: style_AtractivosTursticos_5_0,
+        });
+        bounds_group.addLayer(layer_AtractivosTursticos_5);
+        map.addLayer(layer_AtractivosTursticos_5);
+        var osmGeocoder = new L.Control.Geocoder({
+            collapsed: true,
+            position: 'topleft',
+            text: 'Search',
+            title: 'Testing'
+        }).addTo(map);
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .className += ' fa fa-search';
+        document.getElementsByClassName('leaflet-control-geocoder-icon')[0]
+        .title += 'Search for a place';
+        var overlaysTree = [
+            {label: '<img src="legend/AtractivosTursticos_5.png" /> Atractivos Turísticos ', layer: layer_AtractivosTursticos_5},
+            {label: 'Atractivos Turísticos<br /><table><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_4_EspacioPrivado0.png" /></td><td>Espacio Privado</td></tr><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_4_Patrimonial1.png" /></td><td>Patrimonial</td></tr><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_4_SitioNatural2.png" /></td><td>Sitio Natural</td></tr><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_4_EspacioPúblico3.png" /></td><td>Espacio Público</td></tr></table>', layer: layer_AtractivosTursticos_4},
+            {label: 'Atractivos Turísticos <br /><table><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_3_Gastronomía0.png" /></td><td>Gastronomía</td></tr><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_3_Museo1.png" /></td><td>Museo</td></tr><tr><td style="text-align: center;"><img src="legend/AtractivosTursticos_3_Religioso2.png" /></td><td>Religioso</td></tr></table>', layer: layer_AtractivosTursticos_3},
+            {label: '<img src="legend/Barrios_2.png" /> Barrios', layer: layer_Barrios_2},
+            {label: '<img src="legend/Comunas_1.png" /> Comunas', layer: layer_Comunas_1},
+            {label: "OpenStreetMap", layer: layer_OpenStreetMap_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        setBounds();
+        map.addControl(new L.Control.Search({
+            layer: layer_AtractivosTursticos_5,
+            initial: false,
+            hideMarkerOnCollapse: true,
+            propertyName: 'Lugar'}));
+        document.getElementsByClassName('search-button')[0].className +=
+         ' fa fa-binoculars';
+        var mapDiv = document.getElementById('map');
+        var row = document.createElement('div');
+        row.className="row";
+        row.id="all";
+        row.style.height = "100%";
+        var col1 = document.createElement('div');
+        col1.className="col9";
+        col1.id = "mapWindow";
+        col1.style.height = "99%";
+        col1.style.width = "80%";
+        col1.style.display = "inline-block";
+        var col2 = document.createElement('div');
+        col2.className="col3";
+        col2.id = "menu";
+        col2.style.display = "inline-block";
+        mapDiv.parentNode.insertBefore(row, mapDiv);
+        document.getElementById("all").appendChild(col1);
+        document.getElementById("all").appendChild(col2);
+        col1.appendChild(mapDiv)
+        var Filters = {"Lugar": "str","Tipo": "str"};
+        function filterFunc() {
+          map.eachLayer(function(lyr){
+          if ("options" in lyr && "dataVar" in lyr["options"]){
+            features = this[lyr["options"]["dataVar"]].features.slice(0);
+            try{
+              for (key in Filters){
+                keyS = key.replace(/[^a-zA-Z0-9_]/g, "")
+                if (Filters[key] == "str" || Filters[key] == "bool"){
+                  var selection = [];
+                  var options = document.getElementById("sel_" + keyS).options
+                  for (var i=0; i < options.length; i++) {
+                    if (options[i].selected) selection.push(options[i].value);
+                  }
+                    try{
+                      if (key in features[0].properties){
+                        for (i = features.length - 1;
+                          i >= 0; --i){
+                          if (selection.indexOf(
+                          features[i].properties[key])<0
+                          && selection.length>0) {
+                          features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                  }
+                }
+                if (Filters[key] == "int"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (parseInt(features[i].properties[key])
+                          < sliderVals[0]
+                          || parseInt(features[i].properties[key])
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "real"){
+                  sliderVals =  document.getElementById(
+                    "div_" + keyS).noUiSlider.get();
+                  try{
+                    if (key in features[0].properties){
+                    for (i = features.length - 1; i >= 0; --i){
+                      if (features[i].properties[key]
+                          < sliderVals[0]
+                          || features[i].properties[key]
+                          > sliderVals[1]){
+                            features.splice(i,1);
+                          }
+                        }
+                      }
+                    } catch(err){
+                    }
+                  }
+                if (Filters[key] == "date"
+                  || Filters[key] == "datetime"
+                  || Filters[key] == "time"){
+                  try{
+                    if (key in features[0].properties){
+                      HTMLkey = key.replace(/[&\/\\#,+()$~%.'":*?<>{} ]/g, '');
+                      startdate = document.getElementById("dat_" +
+                        HTMLkey + "_date1").value.replace(" ", "T");
+                      enddate = document.getElementById("dat_" +
+                        HTMLkey + "_date2").value.replace(" ", "T");
+                      for (i = features.length - 1; i >= 0; --i){
+                        if (features[i].properties[key] < startdate
+                          || features[i].properties[key] > enddate){
+                          features.splice(i,1);
+                        }
+                      }
+                    }
+                  } catch(err){
+                  }
+                }
+              }
+            } catch(err){
+            }
+          this[lyr["options"]["layerName"]].clearLayers();
+          this[lyr["options"]["layerName"]].addData(features);
+          }
+          })
+        }
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Lugar = document.createElement('div');
+            div_Lugar.id = "div_Lugar";
+            div_Lugar.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Lugar);
+            sel_Lugar = document.createElement('select');
+            sel_Lugar.multiple = true;
+            sel_Lugar.size = 10;
+            sel_Lugar.id = "sel_Lugar";
+            var Lugar_options_str = "<option value='' unselected></option>";
+            sel_Lugar.onchange = function(){filterFunc()};
+            Lugar_options_str  += '<option value="Barrio Chino Lirquen">Barrio Chino Lirquen</option>';
+            Lugar_options_str  += '<option value="Barrio explanada Tomé">Barrio explanada Tomé</option>';
+            Lugar_options_str  += '<option value="Catedral de Concepción">Catedral de Concepción</option>';
+            Lugar_options_str  += '<option value="Ciclovía Parque San Pedro del Valle">Ciclovía Parque San Pedro del Valle</option>';
+            Lugar_options_str  += '<option value="Club Hipico de Concepción">Club Hipico de Concepción</option>';
+            Lugar_options_str  += '<option value="Estero Penco golonderos">Estero Penco golonderos</option>';
+            Lugar_options_str  += '<option value="Fina Estampa Chiguayante">Fina Estampa Chiguayante</option>';
+            Lugar_options_str  += '<option value="Iglesia emanuel Bellavista">Iglesia emanuel Bellavista</option>';
+            Lugar_options_str  += '<option value="La Casona Restaurante">La Casona Restaurante</option>';
+            Lugar_options_str  += '<option value="Laguna los Mendez">Laguna los Mendez</option>';
+            Lugar_options_str  += '<option value="Mercado de Talcahuano">Mercado de Talcahuano</option>';
+            Lugar_options_str  += '<option value="Museo Popular de Coronel">Museo Popular de Coronel</option>';
+            Lugar_options_str  += '<option value="Museo de Historia Natural Concepción">Museo de Historia Natural Concepción</option>';
+            Lugar_options_str  += '<option value="Parque el Mirador los 3 Pinos">Parque el Mirador los 3 Pinos</option>';
+            Lugar_options_str  += '<option value="Parque las tres Pascualas">Parque las tres Pascualas</option>';
+            Lugar_options_str  += '<option value="Plaza Lisa Peter">Plaza Lisa Peter</option>';
+            Lugar_options_str  += '<option value="Plaza Perú">Plaza Perú</option>';
+            Lugar_options_str  += '<option value="Plaza de armas de Lota">Plaza de armas de Lota</option>';
+            Lugar_options_str  += '<option value="Restaurant Vagary Bistro">Restaurant Vagary Bistro</option>';
+            Lugar_options_str  += '<option value="Teatro Enrique Molina Garmendia">Teatro Enrique Molina Garmendia</option>';
+            Lugar_options_str  += '<option value="Teatro de Lota">Teatro de Lota</option>';
+            sel_Lugar.innerHTML = Lugar_options_str;
+            div_Lugar.appendChild(sel_Lugar);
+            var lab_Lugar = document.createElement('div');
+            lab_Lugar.innerHTML = 'Lugar';
+            lab_Lugar.className = 'filterlabel';
+            div_Lugar.appendChild(lab_Lugar);
+            var reset_Lugar = document.createElement('div');
+            reset_Lugar.innerHTML = 'clear filter';
+            reset_Lugar.className = 'filterlabel';
+            reset_Lugar.onclick = function() {
+                var options = document.getElementById("sel_Lugar").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Lugar.appendChild(reset_Lugar);
+            document.getElementById("menu").appendChild(
+                document.createElement("div"));
+            var div_Tipo = document.createElement('div');
+            div_Tipo.id = "div_Tipo";
+            div_Tipo.className= "filterselect";
+            document.getElementById("menu").appendChild(div_Tipo);
+            sel_Tipo = document.createElement('select');
+            sel_Tipo.multiple = true;
+            sel_Tipo.size = 10;
+            sel_Tipo.id = "sel_Tipo";
+            var Tipo_options_str = "<option value='' unselected></option>";
+            sel_Tipo.onchange = function(){filterFunc()};
+            Tipo_options_str  += '<option value="Comercio">Comercio</option>';
+            Tipo_options_str  += '<option value="Deportivo">Deportivo</option>';
+            Tipo_options_str  += '<option value="Estero">Estero</option>';
+            Tipo_options_str  += '<option value="Gastronomía">Gastronomía</option>';
+            Tipo_options_str  += '<option value="Laguna">Laguna</option>';
+            Tipo_options_str  += '<option value="Museo">Museo</option>';
+            Tipo_options_str  += '<option value="Parque">Parque</option>';
+            Tipo_options_str  += '<option value="Plaza">Plaza</option>';
+            Tipo_options_str  += '<option value="Recreación">Recreación</option>';
+            Tipo_options_str  += '<option value="Religioso">Religioso</option>';
+            sel_Tipo.innerHTML = Tipo_options_str;
+            div_Tipo.appendChild(sel_Tipo);
+            var lab_Tipo = document.createElement('div');
+            lab_Tipo.innerHTML = 'Tipo';
+            lab_Tipo.className = 'filterlabel';
+            div_Tipo.appendChild(lab_Tipo);
+            var reset_Tipo = document.createElement('div');
+            reset_Tipo.innerHTML = 'clear filter';
+            reset_Tipo.className = 'filterlabel';
+            reset_Tipo.onclick = function() {
+                var options = document.getElementById("sel_Tipo").options;
+                for (var i=0; i < options.length; i++) {
+                    options[i].selected = false;
+                }
+                filterFunc();
+            };
+            div_Tipo.appendChild(reset_Tipo);
+        </script>
+    </body>
+</html>
